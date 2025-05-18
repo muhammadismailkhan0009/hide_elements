@@ -37,9 +37,11 @@ document.addEventListener("click", (event) => {
   if (!window.selectionMode) return;
 
   if (selectedElement) {
+    console.log("element is selected");
     selectedElement.style.outline = "";
   }
 
+  console.log("element is being hovered");
   selectedElement = event.target;
   selectedElement.style.outline = "3px solid blue";  // Confirm selection
 
@@ -53,10 +55,12 @@ document.addEventListener("click", (event) => {
         hiddenSelectors.push(selector);
         chrome.storage.local.set({ [domain]: hiddenSelectors });
         selectedElement.style.display = "none";
+        selectedElement = null;
       }
     });
   } else {
     selectedElement.style.outline = "";
+    selectedElement = null;
   }
 
   window.selectionMode = false; // Exit selection mode after selection
