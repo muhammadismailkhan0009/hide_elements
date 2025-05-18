@@ -1,9 +1,9 @@
 let selectedElement = null;
-window.selectionMode = false;
+let selectionMode = false;
 
 chrome.runtime.onMessage.addListener((message) => {
   if (message.action === "toggleSelectionMode") {
-    window.selectionMode = !window.selectionMode;
+    selectionMode = !selectionMode;
   }
 });
 
@@ -21,40 +21,44 @@ function getUniqueSelector(element) {
 }
 
 document.addEventListener("mouseover", (event) => {
-  if (!window.selectionMode) return;
+  if (!selectionMode) return;
   if (selectedElement) return;
   event.target.style.outline = "2px dashed red";
 }, true);
 
 document.addEventListener("mouseout", (event) => {
-  if (!window.selectionMode) return;
+  if (!selectionMode) return;
   if (selectedElement) return;
   event.target.style.outline = "";
 }, true);
 
 
 document.addEventListener("click", (event) => {
-  if (!window.selectionMode) return;
+  if (!selectionMode) return;
 
   if (selectedElement) {
-    console.log("element is selected");
     selectedElement.style.outline = "";
   }
 
-  console.log("element is being hovered");
   selectedElement = event.target;
-  selectedElement.style.outline = "3px solid blue";  // Confirm selection
+  selectedElement.style.outline = "3px solid blue";
 
   let selector = getUniqueSelector(selectedElement);
   let domain = window.location.hostname;
 
   if (confirm("Hide this element permanently?")) {
-    chrome.storage.local.get([domain], (data) => {
-      let hiddenSelectors = data[domain] || [];
-      if (!hiddenSelectors.includes(selector)) {
-        hiddenSelectors.push(selector);
-        chrome.storage.local.set({ [domain]: hiddenSelectors });
-        selectedElement.style.display = "none";
+    chrome.storage.local.get(null, (data) => {
+      let domainData = data[domain] || [];
+      if (!domainData.includes(selector)) {
+        domainData.push(selector);
+        let update = {};
+        update[domain] = domainData;
+        chrome.storage.local.set(update, () => {
+          selectedElement.style.display = "none";
+          selectedElement = null;
+        });
+      } else {
+        selectedElement.style.outline = "";
         selectedElement = null;
       }
     });
@@ -63,22 +67,21 @@ document.addEventListener("click", (event) => {
     selectedElement = null;
   }
 
-  window.selectionMode = false; // Exit selection mode after selection
+  selectionMode = false;
 }, true);
 
 
-// Function to hide stored elements on page load
 function hideStoredElements() {
-  console.log("running the hide stored elements");
   let domain = window.location.hostname;
-  chrome.storage.local.get([domain], (data) => {
-    let hiddenSelectors = data[domain] || [];
-    hiddenSelectors.forEach(selector => {
-      let elements = document.querySelectorAll(selector);
-      elements.forEach(el => el.style.display = "none");
-    });
+  chrome.storage.local.get(null, (data) => {
+    if (data && data[domain]) {
+      let hiddenSelectors = data[domain];
+      hiddenSelectors.forEach(selector => {
+        let elements = document.querySelectorAll(selector);
+        elements.forEach(el => el.style.display = "none");
+      });
+    }
   });
 }
 
-// Run the hiding function on page load
 hideStoredElements();
